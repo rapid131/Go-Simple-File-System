@@ -47,3 +47,7 @@ Below is an example of testing you could do with my program. The Open call with 
 ### filesystem.Read("hello.txt", 1)
 ### filesystem.Unlink("hello.txt", 1)
 ### filesystem.Read("hello.txt", 1)
+you can also pull the inodes, print them, and write them back in using the following calls:
+### inodes := filesystem.ReadInodesFromDisk()
+### fmt.Println(inodes)
+### filesystem.WriteInodesToDisk(inodes)
