@@ -721,7 +721,7 @@ func Read(filename string, searchnode int) {
 	}
 	WriteInodesToDisk(inodes)
 }
-func Write(filename string, searchnode int) {
+func Write(filename string, searchnode int, fileinfo string) {
 	//read inodes and search for correct inode
 	inodes := ReadInodesFromDisk()
 	var disknode Inode
@@ -754,13 +754,9 @@ func Write(filename string, searchnode int) {
 		}
 	}
 	if found == true {
-		fmt.Println("Writing to file: ", filename)
-		var info string
-		fmt.Println("Please enter a string to write to disk")
-		fmt.Scanln(&info)
 		inode = inodes[workinginode]
 		workingfile = DecodeDirectoryEntryFromDisk(inode)
-		workingfile.Fileinfo = info
+		workingfile.Fileinfo = fileinfo
 		inode = EncodeDirectoryEntryToDisk(workingfile, inode)
 		inode.Filemodified = time.Now()
 		inodes[inode.Inodenumber] = inode
