@@ -183,6 +183,29 @@ func bytesToBools(b []byte) []bool {
 	}
 	return t
 }
+func EncodeIntArrayToDisk(data []int, blockIndex int) {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	err := enc.Encode(data)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Copy the encoded data to the virtual disk
+	copy(VirtualDisk[blockIndex][:], buf.Bytes())
+}
+func DecodeIntArrayFromDisk(blockIndex int) []int {
+	var data []int
+
+	// Decode the data from the virtual disk
+	decoder := gob.NewDecoder(bytes.NewReader(VirtualDisk[blockIndex][:]))
+	err := decoder.Decode(&data)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return data
+}
 
 // this function reads the superblock by decoding it from VirtualDisk[0]
 func ReadSuperblock() SuperBlock {
@@ -303,15 +326,19 @@ func AddWorkingDirectoryToDisk(directory Directory, datablocks [4]int) {
 func DecodeDirectoryEntryFromDisk(inode Inode) DirectoryEntry {
 	var entry DirectoryEntry
 	var data []byte
-
+	var directarray []int
 	// iterate through the data blocks of the inode
-	for i := 0; i < len(inode.Datablocks); i++ {
-		// if the data block is not zero
-		if inode.Datablocks[i] != 0 {
-			// Read the data from the data block
-			data = append(data, VirtualDisk[inode.Datablocks[i]][:]...)
-			// Decode the data into DirectoryEntry
+	for i := 0; i < 4; i++ {
+		if i == 3 && inode.Datablocks[i] != 0 {
+			directarray = append(directarray, DecodeIntArrayFromDisk(inode.Datablocks[3])...)
 		}
+		if inode.Datablocks[i] != 0 {
+			directarray = append(directarray, inode.Datablocks[i])
+		}
+	}
+	for i := range directarray {
+		// if the data block is not zero
+		data = append(data, VirtualDisk[directarray[i]][:]...)
 	}
 	//decode data
 	decoder := gob.NewDecoder(bytes.NewReader(data))
@@ -339,10 +366,17 @@ func EncodeDirectoryEntryToDisk(entry DirectoryEntry, inode Inode) Inode {
 
 	// Check if any blocks are already allocated for the inode
 	allocatedBlocks := 0
-	for _, block := range inode.Datablocks {
-		if block != 0 {
+	var datablocks []int
+	for i := 0; i < 3; i++ {
+		if inode.Datablocks[i] != 0 {
 			allocatedBlocks++
+			datablocks = append(datablocks, inode.Datablocks[i])
 		}
+	}
+	if inode.Datablocks[3] != 0 {
+		indirectarray := DecodeIntArrayFromDisk(inode.Datablocks[3])
+		datablocks = append(datablocks, indirectarray...)
+		allocatedBlocks = allocatedBlocks + len(indirectarray)
 	}
 
 	// Check if the existing allocated blocks are sufficient
@@ -354,34 +388,59 @@ func EncodeDirectoryEntryToDisk(entry DirectoryEntry, inode Inode) Inode {
 			if end > len(data) {
 				end = len(data)
 			}
-			copy(VirtualDisk[inode.Datablocks[i]][:], data[start:end])
+			copy(VirtualDisk[datablocks[i]][:], data[start:end])
 			start = end
 		}
 		return inode
 	}
-
+	//allocate a block of pointers if necessary
+	if inode.Datablocks[2] != 0 && inode.Datablocks[3] == 0 && numBlocksNeeded > 3 {
+		for i := range blockBitmap {
+			if blockBitmap[i] != true {
+				blockBitmap[i] = true
+				indirectblock := i + superblock.Datablocksoffset
+				inode.Datablocks[3] = indirectblock
+				break
+			}
+		}
+	}
 	// Allocate new blocks for the remaining data
 	freeBlocks := make([]int, 0)
 	for i := range blockBitmap {
 		if !blockBitmap[i] {
 			blockBitmap[i] = true
-			freeBlocks = append(freeBlocks, i)
+			freeBlocks = append(freeBlocks, i+superblock.Datablocksoffset)
 			if len(freeBlocks) == numBlocksNeeded-allocatedBlocks {
 				break
 			}
 		}
 	}
-
+	datablocks = append(datablocks, freeBlocks...)
 	// Check if enough free blocks are available
 	if len(freeBlocks) < numBlocksNeeded-allocatedBlocks {
 		log.Fatal("Not enough free blocks available for data")
 	}
 
 	// Update the inode with the new data blocks
-	for i := allocatedBlocks; i < numBlocksNeeded; i++ {
-		inode.Datablocks[i] = freeBlocks[i-allocatedBlocks] + superblock.Datablocksoffset
+	if len(datablocks) <= 3 {
+		for i := range datablocks {
+			inode.Datablocks[i] = datablocks[i]
+		}
+	} else {
+		for i := 0; i < 3; i++ {
+			inode.Datablocks[i] = datablocks[i]
+		}
+		if inode.Datablocks[3] == 0 {
+			for i := range blockBitmap {
+				if !blockBitmap[i] {
+					blockBitmap[i] = true
+					inode.Datablocks[3] = i + superblock.Datablocksoffset
+					break
+				}
+			}
+		}
+		EncodeIntArrayToDisk(datablocks[3:], inode.Datablocks[3])
 	}
-
 	// Write data to the allocated blocks
 	start := 0
 	for i := 0; i < numBlocksNeeded; i++ {
@@ -389,7 +448,7 @@ func EncodeDirectoryEntryToDisk(entry DirectoryEntry, inode Inode) Inode {
 		if end > len(data) {
 			end = len(data)
 		}
-		copy(VirtualDisk[inode.Datablocks[i]][:], data[start:end])
+		copy(VirtualDisk[datablocks[i]][:], data[start:end])
 		start = end
 	}
 
@@ -411,7 +470,7 @@ func Open(mode string, filename string, searchnode int) {
 		var inode Inode
 		for i := range inodes {
 			if inodes[i].Inodenumber == searchnode {
-				disknode = Inodes[i]
+				disknode = inodes[i]
 				break
 			}
 		}
@@ -657,18 +716,30 @@ func Unlink(filename string, searchnode int) {
 			}
 		}
 		var emptyarray [1024]byte
+		inode := inodes[workinginode]
+		var inodedatablocks []int
 		//adjust the blockbitmap
-		for i := range inodes[workinginode].Datablocks {
-			if inodes[workinginode].Datablocks[i] != 0 {
-				blockbitmap[inodes[workinginode].Datablocks[i]-superblock.Datablocksoffset] = false
-				copy(VirtualDisk[inodes[workinginode].Datablocks[i]][:], emptyarray[:])
+		for i := 0; i < 3; i++ {
+			if inode.Datablocks[i] != 0 {
+				inodedatablocks = append(inodedatablocks, inode.Datablocks[i])
 			}
+		}
+		if inode.Datablocks[3] != 0 {
+			indirectdatablocks := DecodeIntArrayFromDisk(inode.Datablocks[3])
+			inodedatablocks = append(inodedatablocks, indirectdatablocks...)
+			blockbitmap[inode.Datablocks[3]-superblock.Datablocksoffset] = false
+			copy(VirtualDisk[inode.Datablocks[3]][:], emptyarray[:]) //fix
+		}
+		for i := range inodedatablocks {
+			blockbitmap[inodedatablocks[i]-superblock.Datablocksoffset] = false
+			copy(VirtualDisk[inodedatablocks[i]][:], emptyarray[:])
 		}
 		//adjust the inodes
 		inodebitmap[workinginode] = false
-		inodes[workinginode].Datablocks = [4]int{0, 0, 0, 0}
-		inodes[workinginode].IsDirectory = false
-		inodes[workinginode].IsValid = false
+		inode.Datablocks = [4]int{0, 0, 0, 0}
+		inode.IsDirectory = false
+		inode.IsValid = false
+		inodes[workinginode] = inode
 		AddBlockBitmapToDisk(blockbitmap)
 		AddInodeBitmapToDisk(inodebitmap)
 		WriteInodesToDisk(inodes)
