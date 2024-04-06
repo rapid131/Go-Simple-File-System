@@ -331,6 +331,7 @@ func DecodeDirectoryEntryFromDisk(inode Inode) DirectoryEntry {
 	for i := 0; i < 4; i++ {
 		if i == 3 && inode.Datablocks[i] != 0 {
 			directarray = append(directarray, DecodeIntArrayFromDisk(inode.Datablocks[3])...)
+			break
 		}
 		if inode.Datablocks[i] != 0 {
 			directarray = append(directarray, inode.Datablocks[i])
