@@ -826,6 +826,7 @@ func Write(filename string, searchnode int, fileinfo string) {
 		}
 	}
 	if found == true {
+		fmt.Println("Writing to file ", filename)
 		inode = inodes[workinginode]
 		workingfile = DecodeDirectoryEntryFromDisk(inode)
 		workingfile.Fileinfo = fileinfo
