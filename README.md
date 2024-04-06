@@ -13,7 +13,7 @@ The system begins with 120 inodes that are roughly 45 bytes in size each and inh
 	Filemodified time.Time,
 	Inodenumber  int
 }"
-The inodes are numbered from 0-119, the first inode is the null inode, the root directory is located at inode number 1 which is the second inode
+The inodes are numbered from 0-119, the first inode is the null inode, the root directory is located at inode number 1 which is the second inode. Datablocks are 3 direct blocks and 1 indirect block
 ## Allocation Bitmap
 The block bitmap is located at VirtualDisk[2][:] and the Inode bitmap is located at VirtualDisk[1][:]
 ## Root Directory and Directory Structure
@@ -36,8 +36,6 @@ The read function will take filename as a string and an int for the node of the 
 An example call of this function might look like filesystem.Read("hello.txt",1)
 ## Unlink Function
 The unlink function will take filename as a string and an int for the node of the directory and delete the file from the disk. This call zeroes out the inode related to the file, deletes the file entries inside the directory struct, and updates the relevant bitmap portions to false. The function takes the form "Unlink(filename string, searchnode int)". An example call of this function might look like filesystem.Unlink("hello.txt",1)
-## Maximum file size
-The maximum file size for my program will be 4 blocks, I could not get the single layer of indirection to work though I plan to keep trying if I end up having the time to do so.
 ## Example testing
 Below is an example of testing you could do with my program. The Open call with mode "open" will create a file called "hello.txt" and the write call will write the "big" string to the files contents. The contents can then be read via the Read call
 ### filesystem.InitializeDisk()
