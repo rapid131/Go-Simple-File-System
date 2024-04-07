@@ -29,6 +29,16 @@ The root directory is located at VirtualDisk[9][:] and my directory structure fo
 }
 ```
 Directory.Files is an integer array that holds the inodes for flies, and Directory.Filenames is a string array that holds the names of those files. Files and their inode numbers are pushed onto the arrays in the same index so they are always tied to each other. Directory.Inode and Directory.Filename both belong to the directory itself. Filenames are restricted in size by the Open system call. The root directory is located at the second inode which is inode number 1
+## File Structure
+Files in the system are based on the following struct 
+```
+type DirectoryEntry struct {
+	Filename string
+	Inode    int
+	Fileinfo string
+}
+```
+The filename string is limited in size by the Open function. The fileinfo string is the string which holds the data of the file. 
 ## Open Function
 The Open function takes filename as a string, mode as a string, and parent directory integer as arguments in the form "Open(mode string, filename string, searchnode int)"
 An example Open call might look like filesystem.Open("open","hello.txt",1) the root directory is located at inode number one so that is the integer entered.
