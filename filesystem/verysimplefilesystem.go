@@ -221,11 +221,17 @@ func ReadSuperblock() SuperBlock {
 func ReadFolder(w, x, y, z int) Directory {
 	var directory Directory
 	var blockData []byte
+	var indirectblocks []int
 	// write relevant blocks to blockdata
 	blockData = append(blockData, VirtualDisk[w][:]...)
 	blockData = append(blockData, VirtualDisk[x][:]...)
 	blockData = append(blockData, VirtualDisk[y][:]...)
-	blockData = append(blockData, VirtualDisk[z][:]...)
+	if z != 0 {
+		indirectblocks = DecodeIntArrayFromDisk(z)
+		for _, block := range indirectblocks {
+			blockData = append(blockData, VirtualDisk[block][:]...)
+		}
+	}
 	// decode blockdata
 	decoder := gob.NewDecoder(bytes.NewReader(blockData))
 	if err := decoder.Decode(&directory); err != nil {
