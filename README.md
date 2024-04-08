@@ -15,7 +15,7 @@ type Inode struct {
 	Inodenumber  int
 }
 ```
-The inodes are numbered from 0-119, the first inode is the null inode, the root directory is located at inode number 1 which is the second inode. Datablocks are 3 direct blocks and 1 indirect block
+The inodes are numbered from 0-119, the first inode is the null inode, the root directory is located at inode number 1 which is the second inode. Datablocks are 3 direct blocks and 1 indirect block. The blocks point directly to the real block number the data is located in, meaning the datablocks in the inode already have the datablockoffset added to them.
 ## Allocation Bitmap
 The block bitmap is located at VirtualDisk[2][:] and the Inode bitmap is located at VirtualDisk[1][:]
 ## Root Directory and Directory Structure
