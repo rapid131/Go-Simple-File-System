@@ -40,7 +40,7 @@ func main() {
 		//case cd,
 		case "more":
 			if list[1] == ">>" {
-				cmd := exec.Command(list[0])
+				cmd := exec.Command("less")
 				cmd.Stdin = strings.NewReader(filesystem.Read(list[2], currentworkingdirectory))
 				cmd.Stdout = os.Stdout
 				err := cmd.Run()
