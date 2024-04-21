@@ -37,7 +37,11 @@ func main() {
 		//first case exit, exits the shell
 		case "exit":
 			os.Exit(0)
-		//case cd,
+		//got this partially from here https://stackoverflow.com/questions/28705716/paging-output-from-go
+		case "rm":
+			if list[1] == ">>" {
+				filesystem.Unlink(list[2], currentworkingdirectory)
+			}
 		case "more":
 			if list[1] == ">>" {
 				cmd := exec.Command("less")
@@ -70,7 +74,7 @@ func main() {
 			}
 		case "cd":
 			//only cd was typed
-			if list[1] == ">>" {
+			if list[1] == ">>" && len(list) > 1 {
 				if len(list) < 3 {
 					currentworkingdirectory = 1
 					fmt.Println("In directory root.dir")
