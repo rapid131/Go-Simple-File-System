@@ -172,7 +172,7 @@ func boolsToBytes(t []bool) []byte {
 }
 
 // this function converts a byte array to booleans
-func bytesToBools(b []byte) []bool {
+func BytesToBools(b []byte) []bool {
 	t := make([]bool, 8*len(b))
 	for i, x := range b {
 		for j := 0; j < 8; j++ {
@@ -366,7 +366,7 @@ func EncodeDirectoryEntryToDisk(entry DirectoryEntry, inode Inode) Inode {
 	data := buf.Bytes()
 
 	superblock := ReadSuperblock()
-	blockBitmap := bytesToBools(VirtualDisk[superblock.Blockbitmapoffset][:EndBlockBitmap])
+	blockBitmap := BytesToBools(VirtualDisk[superblock.Blockbitmapoffset][:EndBlockBitmap])
 
 	// Calculate the number of blocks needed for the data
 	numBlocksNeeded := (len(data) + Blocksize - 1) / Blocksize
@@ -514,7 +514,7 @@ func Open(mode string, filename string, searchnode int) {
 				fmt.Println("Creating new file ", filename, " in working directory ", workingdirectory.Filename)
 				//create a file
 				var newfile DirectoryEntry
-				inodebitmap := bytesToBools(VirtualDisk[superblock.Inodebitmapoffset][:EndInodeBitmap])
+				inodebitmap := BytesToBools(VirtualDisk[superblock.Inodebitmapoffset][:EndInodeBitmap])
 				newfile.Filename = filename
 				//get the first free inode
 				for i := range inodebitmap {
@@ -703,8 +703,8 @@ func Unlink(filename string, searchnode int) {
 	//get the workingdirectory from the inodes
 	var workinginode int
 	var found bool
-	blockbitmap := bytesToBools(VirtualDisk[superblock.Blockbitmapoffset][:EndBlockBitmap])
-	inodebitmap := bytesToBools(VirtualDisk[superblock.Inodebitmapoffset][:EndInodeBitmap])
+	blockbitmap := BytesToBools(VirtualDisk[superblock.Blockbitmapoffset][:EndBlockBitmap])
+	inodebitmap := BytesToBools(VirtualDisk[superblock.Inodebitmapoffset][:EndInodeBitmap])
 	workingdirectory := ReadFolder(datablocks[0], datablocks[1], datablocks[2], datablocks[3])
 	for i := range workingdirectory.Filenames {
 		if workingdirectory.Filenames[i] == filename {
@@ -756,22 +756,14 @@ func Unlink(filename string, searchnode int) {
 		fmt.Println("Could not find file")
 	}
 }
-func Read(filename string, searchnode int) {
+func Read(filename string, searchnode int) string {
 	//read inodes and search for correct inode
 	inodes := ReadInodesFromDisk()
-	var disknode Inode
 	var inode Inode
-	for i := range inodes {
-		if inodes[i].Inodenumber == searchnode {
-			disknode = Inodes[i]
-			break
-		}
-	}
+
 	//get the datablocks for the inode
 	var datablocks [4]int
-	for i := range disknode.Datablocks {
-		datablocks[i] = disknode.Datablocks[i]
-	}
+	datablocks = inodes[searchnode].Datablocks
 	if datablocks[0] == 0 {
 		fmt.Println("No directory present at inode ", searchnode)
 	}
@@ -791,30 +783,22 @@ func Read(filename string, searchnode int) {
 	if found == true {
 		inode = inodes[workinginode]
 		workingfile = DecodeDirectoryEntryFromDisk(inode)
-		fmt.Println("File ", workingfile.Filename, " contains info: ", workingfile.Fileinfo)
 		inode = EncodeDirectoryEntryToDisk(workingfile, inode)
 		inodes[inode.Inodenumber] = inode
 	} else {
 		fmt.Println("Could not find file")
 	}
 	WriteInodesToDisk(inodes)
+	return workingfile.Fileinfo
 }
 func Write(filename string, searchnode int, fileinfo string) {
 	//read inodes and search for correct inode
 	inodes := ReadInodesFromDisk()
-	var disknode Inode
 	var inode Inode
-	for i := range inodes {
-		if inodes[i].Inodenumber == searchnode {
-			disknode = Inodes[i]
-			break
-		}
-	}
+
 	//get the datablocks for the inode
 	var datablocks [4]int
-	for i := range disknode.Datablocks {
-		datablocks[i] = disknode.Datablocks[i]
-	}
+	datablocks = inodes[searchnode].Datablocks
 	if datablocks[0] == 0 {
 		fmt.Println("No directory present at inode ", searchnode)
 	}
