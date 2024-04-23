@@ -64,7 +64,8 @@ func main() {
 				filesystem.Open("open", list[3], currentworkingdirectory)
 				filesystem.Write(list[3], currentworkingdirectory, newstring)
 			} else if list[1] == ">>" {
-				filesystem.Read(list[2], currentworkingdirectory)
+				readstring := filesystem.Read(list[2], currentworkingdirectory)
+				fmt.Println(readstring)
 			} else {
 				command := exec.Command("ls", list[1:]...)
 				out, err := command.Output()
