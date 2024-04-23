@@ -1,65 +1,35 @@
 # Thomas Hutton
-## Project2 "file system" readme
-This is a simple file system that uses a byte array known as var VirtualDisk [6010][1024]byte. All files and directories are encoded using gob encoding and pushed onto the byte array. 
-## Superblock
-The superblock inhabits VirtualDisk[0][:] and holds values for the inode offset (3) blockbitmapoffset (2) inodebitmapoffset (1) and datablockoffset (9)
-## Inodes
-The system begins with 120 inodes that are roughly 45 bytes in size each and inhabit the block space VirtualDisk[3][:] to VirtualDisk[8][:] taking up 5 blocks. The inodes follow this format
-```
-type Inode struct {
-	IsValid      bool,
-	IsDirectory  bool,
-	Datablocks   [4]int,
-	Filecreated  time.Time,
-	Filemodified time.Time,
-	Inodenumber  int
-}
-```
-The inodes are numbered from 0-119, the first inode is the null inode, the root directory is located at inode number 1 which is the second inode. Datablocks are 3 direct blocks and 1 indirect block. The blocks point directly to the real block number the data is located in, meaning the datablocks in the inode already have the datablockoffset added to them.
-## Allocation Bitmap
-The block bitmap is located at VirtualDisk[2][:] and the Inode bitmap is located at VirtualDisk[1][:]
-## Root Directory and Directory Structure
-The root directory is located at VirtualDisk[9][:] and my directory structure follows the format: 
-```
-"type Directory struct {
-	Filename  string,
-	Inode     int,
-	Files     []int,
-	Filenames []string,
-}
-```
-Directory.Files is an integer array that holds the inodes for flies, and Directory.Filenames is a string array that holds the names of those files. Files and their inode numbers are pushed onto the arrays in the same index so they are always tied to each other. Directory.Inode and Directory.Filename both belong to the directory itself. Filenames are restricted in size by the Open system call. The root directory is located at the second inode which is inode number 1
-## File Structure
-Files in the system are based on the following struct 
-```
-type DirectoryEntry struct {
-	Filename string
-	Inode    int
-	Fileinfo string
-}
-```
-The filename string is limited in size by the Open function. The fileinfo string is the string which holds the data of the file. 
-## Open Function
-The Open function takes filename as a string, mode as a string, and parent directory integer as arguments in the form "Open(mode string, filename string, searchnode int)"
-An example Open call might look like filesystem.Open("open","hello.txt",1) the root directory is located at inode number one so that is the integer entered.
-The open function also supports "read", "write", and "append" modes. Write and append take user input to add a string to the file, while read prints the contents of a file.
-## Write Function
-The Write function will take filename as a string, fileinfo as a string, and an int for the node of the directory in the form "Write(filename string, searchnode int, fileinfo string)". An example call of this function might look like filesystem.Write("hello.txt", 1, bigstring)
-## Read Function
-The read function will take filename as a string and an int for the node of the directory in the form "Read(filename string, searchnode int)".
-An example call of this function might look like filesystem.Read("hello.txt",1)
-## Unlink Function
-The unlink function will take filename as a string and an int for the node of the directory and delete the file from the disk. This call zeroes out the inode related to the file, deletes the file entries inside the directory struct, and updates the relevant bitmap portions to false. The function takes the form "Unlink(filename string, searchnode int)". An example call of this function might look like filesystem.Unlink("hello.txt",1)
+## Project3 "putting it all together" readme
+This is a working shell that uses my virtual filesystem to perform basic file maintenance tasks. All the functions will work on a file which exists in the current working directory, how to change the working directory and make new ones are explained in the "cd" and "mkdir" sections below.
+## "rm" command
+The rm command will take a filename and remove the file from the filesystem such as `rm hello.txt`
+## "more" command
+The more command will take a filename and present the file contents in a pager. The pages can be filed through using spacebar and 'q' will exit the pager and return to the shell. command should appear as `more hello.txt`
+## "cat" command
+the cat command is a special command that can work with the real and virtual filesystem. To redirect text from a .txt file in the real file system to a new file in the virtual file system, the user must type `cat longfile.txt >> hello.txt` where longfile.txt is a file in the real file system and hello.txt is the file the user wishes to create in the working directory of the virtual file system. The user can also put the redirect directly after "cat" such as `cat >> hello.txt` to print out the text from a virtual file.
+## "cd" command
+cd is another special command that works with the virtual and real file system. To use it as normally with the real file system, simply type `cd directory` or `cd ..` to navigate the real directories. For the virtual file system, one must use the redirect operator such as `cd >> folder.dir`. The user may also use `cd >> ..` and `cd >>` to traverse the virtual file system in a similar way to the real directory system.
+## "whoami" command
+This command simply returns the string I have provided it, in this case "thutton2 Thomas Hutton"
+## "ls" and "wc" commands
+These commands continue to only use the real file system and do not interact with the virtual file system.
+## "mkdir" command
+the mkdir command will create a new folder in the virtual file system inside the current working directory. use should appear as `mkdir folder.dir`
+## "cp" command
+The cp command works with the virtual file system. This command will take a file name in the current working directory and a folder inside the current working directory and copy the file to the child directory chosen. Usage should appear as `cp hello.txt folder.dir`
+## "mv" command
+The mv command works with the virtual file system. This command will take a file name in the current working directory and a folder inside the current working directory and move the file to the child directory chosen. Usage should appear as `mv hello.txt folder.dir`
+
 ## Example testing
-Below is an example of testing you could do with my program. The Open call with mode "open" will create a file called "hello.txt" and the write call will write the "big" string to the files contents. The contents can then be read via the Read call
+Below is an example of testing you could do with my program. 
 ```
-filesystem.InitializeDisk()
-big := "Big string"
-filesystem.Open("open", "hello.txt", 1)
-filesystem.Write("hello.txt", 1, big)
-filesystem.Read("hello.txt", 1)
-filesystem.Unlink("hello.txt", 1)
-filesystem.Read("hello.txt", 1)
+cat longfile.txt >> hello.txt
+mkdir folder.dir
+mv hello.txt folder.dir
+cd >> folder.dir
+more hello.txt
+rm hello.txt
+cd >> ..
 ```
 you can also pull the inodes, print them, and write them back in using the following calls:
 ```
