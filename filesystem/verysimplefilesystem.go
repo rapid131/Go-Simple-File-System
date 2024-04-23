@@ -687,7 +687,7 @@ func Unlink(filename string, searchnode int) {
 	var disknode Inode
 	for i := range inodes {
 		if inodes[i].Inodenumber == searchnode {
-			disknode = Inodes[i]
+			disknode = inodes[i]
 			break
 		}
 	}
@@ -786,7 +786,7 @@ func Read(filename string, searchnode int) string {
 		inode = EncodeDirectoryEntryToDisk(workingfile, inode)
 		inodes[inode.Inodenumber] = inode
 	} else {
-		fmt.Println("Could not find file")
+		return ""
 	}
 	WriteInodesToDisk(inodes)
 	return workingfile.Fileinfo
