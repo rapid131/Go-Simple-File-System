@@ -1,5 +1,5 @@
 # Thomas Hutton
-## Project3 "putting it all together" readme
+## Go File System "putting it all together" readme
 This is a working shell that uses my virtual filesystem to perform basic file maintenance tasks. All the functions will work on a file which exists in the current working directory, how to change the working directory and make new ones are explained in the "cd" and "mkdir" sections below.
 ## "rm" command
 The rm command will take a filename and remove the file from the filesystem such as `rm hello.txt`
